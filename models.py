@@ -10,6 +10,7 @@ Unids = List[str]
 Pdvs = List[str]
 Final = List[str]
 Dptos = List[str]
+Operadores = List[str]
 
 
 class Vdo(abc.ABC):
@@ -228,3 +229,48 @@ class VdoFormaVenda(Vdo):
                 and vfv_tipo=$6;
             ''', generate_decimal(100), generate_decimal(), generate_decimal(),
                 generate_decimal(), unid, tipo[0])
+
+
+class VdoOperadores(Vdo):
+    def __init__(self, conn, unids: Unids, operadores: Operadores):
+        self.conn = conn
+        self.unids = unids
+        self.operadores = operadores
+
+    async def _exists(self) -> bool:
+        stmt = await self.conn.prepare('''select exists(
+            select * from vdooperadores
+            where vop_data=current_date
+        )''')
+        value = await stmt.fetchrow()
+        return value['exists']
+
+    async def _insert(self):
+        await self.conn.execute('''
+            INSERT INTO public.vdooperadores (vop_codseq,vop_unidade,vop_data,
+            vop_operador,vop_descricao,vop_vendabruta,vop_cancelamentos,
+            vop_acrescimos,vop_descontos)
+            select
+                nextval('generate_vdo'),
+                unnest(string_to_array(usu_unidade_rest,';')),
+                current_date,
+                usu_codigo,usu_nome,
+                $1,$2,$3,$4
+            from usuario
+            where usu_grupo=2
+                and usu_ativo='S';''', generate_decimal(100), generate_decimal(),
+                                generate_decimal(), generate_decimal())
+
+    async def _update(self):
+        for operador in self.operadores:
+            unid = random.choice(self.unids)
+            await self.conn.execute('''UPDATE vdooperadores
+            SET vop_vendabruta=vop_vendabruta+$1,
+                vop_cancelamentos=vop_cancelamentos+$2,
+                vop_acrescimos=vop_acrescimos+$3,
+                vop_descontos=vop_descontos+$4
+            where vop_data=current_date
+                and vop_unidade=$5
+                and vop_operador=$6;
+            ''', generate_decimal(100), generate_decimal(), generate_decimal(),
+                generate_decimal(), unid, operador)

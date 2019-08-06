@@ -1,7 +1,10 @@
 import asyncio
-import asyncpg
 from typing import List
-from models import VdoFaixaHora, VdoFinalizadora, VdoDepartamento, VdoFormaVenda
+
+import asyncpg
+
+from models import (VdoDepartamento, VdoFaixaHora, VdoFinalizadora,
+                    VdoFormaVenda, VdoOperadores)
 
 
 async def get_unidades(conn) -> List[str]:
@@ -37,6 +40,17 @@ async def get_departamentos(conn) -> List[str]:
     return [dpto["dpt_codigo"] for dpto in values]
 
 
+async def get_operadores(conn) -> List[str]:
+    stmt = await conn.prepare('''
+        select usu_codigo
+        from usuario
+        where usu_grupo=2
+            and usu_ativo='S';
+        ''')
+    values = await stmt.fetch()
+    return [user["usu_codigo"] for user in values]
+
+
 async def main():
     conn = await asyncpg.connect(
         user='postgres', password='rp1064',
@@ -46,16 +60,19 @@ async def main():
     fin = await get_finalizadoras(conn)
     pdvs = await get_pvds(conn)
     dptos = await get_departamentos(conn)
+    operadores = await get_operadores(conn)
 
     faixa_hora = VdoFaixaHora(conn, unids)
     finalizadora = VdoFinalizadora(conn, unids, pdvs, fin)
     departamento = VdoDepartamento(conn, unids, dptos)
     forma_venda = VdoFormaVenda(conn, unids)
+    operador = VdoOperadores(conn, unids, operadores)
 
     await forma_venda.run()
     await faixa_hora.run()
     await finalizadora.run()
     await departamento.run()
+    await operador.run()
 
     await conn.close()
 
