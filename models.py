@@ -9,6 +9,7 @@ from utils import generate_decimal
 Unids = List[str]
 Pdvs = List[str]
 Final = List[str]
+Dptos = List[str]
 
 
 class Vdo(abc.ABC):
@@ -115,20 +116,65 @@ class VdoFinalizadora(Vdo):
                                 generate_decimal(), generate_decimal())
 
     async def _update(self):
-        unid = random.choice(self.unids)
-        pdv = random.choice(self.pdvs)
-        fin = random.choice(self.fin)
-        await self.conn.execute('''UPDATE vdofinalizadoras
-        SET vfi_vendabruta=vfi_vendabruta+$1,
-            vfi_cancelamentos=vfi_cancelamentos+$2,
-            vfi_acrescimos=vfi_acrescimos+$3,
-            vfi_descontos=vfi_descontos+$4,
-            vfi_qtditens=vfi_qtditens+$5,
-            vfi_qtdcupons=vfi_qtdcupons+$6
-        where vfi_data=current_date
-            and vfi_unidade=$7
-            and vfi_pdv=$8
-            and vfi_finalizadora=$9;
-        ''', generate_decimal(100), generate_decimal(), generate_decimal(),
-            generate_decimal(), generate_decimal(), generate_decimal(),
-            unid, pdv, str(fin))
+        for pdv in self.pdvs:
+            unid = random.choice(self.unids)
+            fin = random.choice(self.fin)
+            await self.conn.execute('''UPDATE vdofinalizadoras
+            SET vfi_vendabruta=vfi_vendabruta+$1,
+                vfi_cancelamentos=vfi_cancelamentos+$2,
+                vfi_acrescimos=vfi_acrescimos+$3,
+                vfi_descontos=vfi_descontos+$4,
+                vfi_qtditens=vfi_qtditens+$5,
+                vfi_qtdcupons=vfi_qtdcupons+$6
+            where vfi_data=current_date
+                and vfi_unidade=$7
+                and vfi_pdv=$8
+                and vfi_finalizadora=$9;
+            ''', generate_decimal(100), generate_decimal(), generate_decimal(),
+                generate_decimal(), generate_decimal(), generate_decimal(),
+                unid, pdv, str(fin))
+
+
+class VdoDepartamento(Vdo):
+    def __init__(self, conn, unids: Unids, dptos: Dptos):
+        self.conn = conn
+        self.unids = unids
+        self.dptos = dptos
+
+    async def _exists(self) -> bool:
+        stmt = await self.conn.prepare('''select exists(
+            select * from vdodepartamentos
+            where vdp_data=current_date
+        )''')
+        value = await stmt.fetchrow()
+        return value['exists']
+
+    async def _insert(self):
+        await self.conn.execute('''
+            INSERT INTO public.vdodepartamentos
+                (vdp_codseq, vdp_unidade, vdp_data, vdp_departamento,
+                vdp_descricao, vdp_vendabruta, vdp_vendaoferta, 
+                vdp_cancelamentos, vdp_acrescimos, vdp_descontos)
+            select
+                nextval('generate_vdo'),
+                uni_codigo,current_date,
+                lpad(dpt_codigo,4,'0'),dpt_nome,$1,$2,$3,$4,$5
+            from unidades,departamentos
+            where uni_ativa='S';''', generate_decimal(100), generate_decimal(),
+                                generate_decimal(), generate_decimal(),
+                                generate_decimal())
+
+    async def _update(self):
+        for dpto in self.dptos:
+            unid = random.choice(self.unids)
+            await self.conn.execute('''UPDATE vdodepartamentos
+            SET vdp_vendabruta=vdp_vendabruta+$1,
+                vdp_cancelamentos=vdp_cancelamentos+$2,
+                vdp_acrescimos=vdp_acrescimos+$3,
+                vdp_descontos=vdp_descontos+$4,
+                vdp_vendaoferta=vdp_vendaoferta+$5
+            where vdp_data=current_date
+                and vdp_unidade=$6
+                and vdp_departamento=$7;
+            ''', generate_decimal(100), generate_decimal(), generate_decimal(),
+                generate_decimal(), generate_decimal(), unid, dpto)
