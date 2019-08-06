@@ -1,7 +1,7 @@
 import abc
 import random
 from datetime import datetime
-from typing import List, Tuple
+from typing import List, Tuple, Sequence
 
 
 from utils import generate_decimal
@@ -184,7 +184,7 @@ class VdoFormaVenda(Vdo):
     def __init__(self, conn, unids: Unids):
         self.conn = conn
         self.unids = unids
-        self.tipos: Tuple[str, str] = (
+        self.tipos: Sequence[Tuple[str, str]] = (
             ("1", "Pack Virtual"),
             ("3", "Cesta Básica"),
             ("7", "Cadastro de Produtos com Desconto - SubTotal"),
