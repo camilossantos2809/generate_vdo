@@ -1,7 +1,7 @@
 import abc
 import random
 from datetime import datetime
-from typing import List
+from typing import List, Tuple
 
 
 from utils import generate_decimal
@@ -178,3 +178,53 @@ class VdoDepartamento(Vdo):
                 and vdp_departamento=$7;
             ''', generate_decimal(100), generate_decimal(), generate_decimal(),
                 generate_decimal(), generate_decimal(), unid, dpto)
+
+
+class VdoFormaVenda(Vdo):
+    def __init__(self, conn, unids: Unids):
+        self.conn = conn
+        self.unids = unids
+        self.tipos: Tuple[str, str] = (
+            ("1", "Pack Virtual"),
+            ("3", "Cesta Básica"),
+            ("7", "Cadastro de Produtos com Desconto - SubTotal"),
+            ("30", "Cadastro de Produtos com Desconto - Desconto no Item"),
+            ("4", "Pré-Venda"),
+        )
+
+    async def _exists(self) -> bool:
+        stmt = await self.conn.prepare('''select exists(
+            select * from vdoformasvenda
+            where vfv_data=current_date
+        )''')
+        value = await stmt.fetchrow()
+        return value['exists']
+
+    async def _insert(self):
+        for tipo in self.tipos:
+            await self.conn.execute('''
+                INSERT INTO public.vdoformasvenda (vfv_codseq,vfv_unidade,
+                    vfv_data,vfv_tipo,vfv_descricao,vfv_vendabruta,vfv_cancelamentos,
+                    vfv_acrescimos,vfv_descontos)
+                select
+                    nextval('generate_vdo'),
+                    uni_codigo,current_date,
+                    $1,$2,$3,$4,$5,$6
+                from unidades
+                where uni_ativa='S';''', tipo[0], tipo[1],
+                                    generate_decimal(100), generate_decimal(),
+                                    generate_decimal(), generate_decimal())
+
+    async def _update(self):
+        for tipo in self.tipos:
+            unid = random.choice(self.unids)
+            await self.conn.execute('''UPDATE vdoformasvenda
+            SET vfv_vendabruta=vfv_vendabruta+$1,
+                vfv_cancelamentos=vfv_cancelamentos+$2,
+                vfv_acrescimos=vfv_acrescimos+$3,
+                vfv_descontos=vfv_descontos+$4
+            where vfv_data=current_date
+                and vfv_unidade=$5
+                and vfv_tipo=$6;
+            ''', generate_decimal(100), generate_decimal(), generate_decimal(),
+                generate_decimal(), unid, tipo[0])

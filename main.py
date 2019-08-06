@@ -1,7 +1,7 @@
 import asyncio
 import asyncpg
 from typing import List
-from models import VdoFaixaHora, VdoFinalizadora, VdoDepartamento
+from models import VdoFaixaHora, VdoFinalizadora, VdoDepartamento, VdoFormaVenda
 
 
 async def get_unidades(conn) -> List[str]:
@@ -50,7 +50,9 @@ async def main():
     faixa_hora = VdoFaixaHora(conn, unids)
     finalizadora = VdoFinalizadora(conn, unids, pdvs, fin)
     departamento = VdoDepartamento(conn, unids, dptos)
+    forma_venda = VdoFormaVenda(conn, unids)
 
+    await forma_venda.run()
     await faixa_hora.run()
     await finalizadora.run()
     await departamento.run()
