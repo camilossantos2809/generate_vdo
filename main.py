@@ -5,6 +5,7 @@ import asyncpg
 
 from models import (VdoDepartamento, VdoFaixaHora, VdoFinalizadora,
                     VdoFormaVenda, VdoOperadores)
+from config import Config
 
 
 async def get_unidades(conn) -> List[str]:
@@ -52,10 +53,9 @@ async def get_operadores(conn) -> List[str]:
 
 
 async def main():
-    conn = await asyncpg.connect(
-        user='postgres', password='rp1064',
-        database='wrpdv_df', host='127.0.0.1'
-    )
+    config = Config()
+    conn = await asyncpg.connect(**config.data)
+
     unids = await get_unidades(conn)
     fin = await get_finalizadoras(conn)
     pdvs = await get_pvds(conn)
