@@ -8,6 +8,7 @@ pylint = "*"
 autopep8 = "*"
 pylama = "*"
 mypy = "*"
+pyinstaller = "*"
 
 [packages]
 asyncpg = "*"

@@ -25,3 +25,7 @@ coverage:
 	clear
 	pipenv run coverage run manage.py test
 	pipenv run coverage report
+
+compile:
+	clear
+	pipenv run python -O -m PyInstaller --hidden-import asyncpg.pgproto.pgproto --hidden-import asyncpg.pgproto.exceptions --hidden-import uuid --hidden-import ipaddress --onefile --name gera_vdo main.py
