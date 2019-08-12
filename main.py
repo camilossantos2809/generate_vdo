@@ -8,6 +8,10 @@ from models import (VdoDepartamento, VdoFaixaHora, VdoFinalizadora,
 from config import Config
 
 
+async def create_sequence(conn):
+    await conn.execute("create sequence if not exists generate_vdo start 1")
+
+
 async def get_unidades(conn) -> List[str]:
     stmt = await conn.prepare('''select uni_codigo
     from unidades where uni_ativa='S';''')
@@ -56,6 +60,7 @@ async def main():
     config = Config()
     conn = await asyncpg.connect(**config.data)
 
+    await create_sequence(conn)
     unids = await get_unidades(conn)
     fin = await get_finalizadoras(conn)
     pdvs = await get_pvds(conn)
