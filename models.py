@@ -36,6 +36,42 @@ class Vdo(abc.ABC):
             await self._insert()
 
 
+class MetasProd:
+    def __init__(self, conn, unids: Unids, dptos: Dptos):
+        self.conn = conn
+        self.unids: Unids = unids
+        self.dptos: Dptos = dptos
+
+    async def _exists(self) -> bool:
+        stmt = await self.conn.prepare('''select exists(
+            select * from metasprod
+            where mtp_data=current_date
+            )''')
+        value = await stmt.fetchrow()
+        return value['exists']
+
+    async def _insert(self):
+        for unid in self.unids:
+            for dpto in self.dptos:
+                await self.conn.execute(
+                    '''INSERT INTO metasprod (mtp_data,mtp_unid_codigo,
+                    mtp_dpto_codigo,mtp_grup_codigo,mtp_vendas,mtp_lucros,
+                    mtp_estoques,mtp_giro,mtp_usua_codigo,mtp_cmv,
+                    mtp_margcontrib,mtp_compras,mtp_perdas,mtp_verbas,
+                    mtp_vdasliq,mtp_devolucoes,mtp_faltas)
+                    VALUES (current_date,$1,$2,'',$3,$4,0.00,0,0,0.000,0.000,
+                    $5,0.00,0.00,0.00,0.00,0.00)''',
+                    unid, dpto[1:], generate_decimal(
+                        10), generate_decimal(100), generate_decimal(100)
+                )
+
+    async def run(self):
+        exist = await self._exists()
+        if not exist:
+            print("insert MetaProd", datetime.now())
+            await self._insert()
+
+
 class VdoFaixaHora(Vdo):
     def __init__(self, conn, unids: Unids):
         self.conn = conn

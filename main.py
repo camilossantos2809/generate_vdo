@@ -3,9 +3,9 @@ from typing import List
 
 import asyncpg
 
-from models import (VdoDepartamento, VdoFaixaHora, VdoFinalizadora,
-                    VdoFormaVenda, VdoOperadores)
 from config import Config
+from models import (MetasProd, VdoDepartamento, VdoFaixaHora, VdoFinalizadora,
+                    VdoFormaVenda, VdoOperadores)
 
 
 async def create_sequence(conn):
@@ -67,12 +67,14 @@ async def main():
     dptos = await get_departamentos(conn)
     operadores = await get_operadores(conn)
 
+    metas = MetasProd(conn, unids, dptos)
     faixa_hora = VdoFaixaHora(conn, unids)
     finalizadora = VdoFinalizadora(conn, unids, pdvs, fin)
     departamento = VdoDepartamento(conn, unids, dptos)
     forma_venda = VdoFormaVenda(conn, unids)
     operador = VdoOperadores(conn, unids, operadores)
 
+    await metas.run()
     await forma_venda.run()
     await faixa_hora.run()
     await finalizadora.run()
